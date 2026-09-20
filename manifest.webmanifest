@@ -1,0 +1,13 @@
+{
+  "name":"중국어 문장 분석기",
+  "short_name":"중국어 분석기",
+  "start_url":"./index.html",
+  "display":"standalone",
+  "background_color":"#f5f5f7",
+  "theme_color":"#111827",
+  "lang":"ko",
+  "icons":[
+    {"src":"./icon-180.png","sizes":"180x180","type":"image/png","purpose":"any maskable"},
+    {"src":"./icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}

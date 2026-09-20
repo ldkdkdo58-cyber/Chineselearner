@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f5f5f7">
+<title>Chinese Study — 중국어 문장 분석기</title>
+<style>
+:root{--bg:#f5f5f7;--card:#fff;--ink:#151922;--muted:#7b7f87;--line:#e8e8eb;--accent:#111827;--soft:#f0f1f4;--red:#b42318}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Noto Sans KR",Arial,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:44px 26px 70px}.eyebrow{font-size:15px;letter-spacing:3px;font-weight:800;color:#777b83}.title{font-size:54px;line-height:1.08;font-weight:800;letter-spacing:-2px;margin:10px 0 20px}.sub{font-size:19px;color:#70747c;margin-bottom:30px}
+.card{background:var(--card);border:1px solid #eee;border-radius:28px;padding:28px;box-shadow:0 8px 30px rgba(0,0,0,.04)}
+textarea{width:100%;min-height:260px;border:0;outline:0;resize:vertical;font-size:20px;line-height:1.8;color:#111;background:transparent;font-family:serif}
+.controls{display:flex;justify-content:flex-end;gap:12px;margin-top:12px}.btn{border:0;border-radius:16px;padding:14px 22px;font-size:16px;font-weight:750;cursor:pointer}.btn.soft{background:#eef0f3;color:#4b5563}.btn.dark{background:#111827;color:#fff}.btn:active{transform:scale(.98)}
+.keyrow{display:none}
+.notice{margin-top:18px;background:#eef8f0;color:#216e39;border-radius:16px;padding:14px 16px;font-size:14px}
+.result{margin-top:22px;display:grid;gap:16px}.section{background:#fff;border:1px solid var(--line);border-radius:22px;padding:22px}.section h2{font-size:18px;margin:0 0 14px}.sentence{font-family:serif;font-size:25px;line-height:1.7}.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{background:#f2f3f5;border-radius:999px;padding:8px 11px;font-size:14px}.chip b{margin-right:5px}
+table{width:100%;border-collapse:collapse;font-size:15px}th,td{text-align:left;padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:#70747c;font-weight:700}.pinyin{color:#667085}.ko{color:#344054}
+.tip{line-height:1.7;color:#40444c}.empty{color:var(--muted)}
+@media(max-width:600px){.wrap{padding:30px 16px 50px}.title{font-size:39px}.sub{font-size:16px}.card{padding:20px;border-radius:22px}textarea{font-size:18px;min-height:220px}.controls{gap:8px}.btn{padding:13px 17px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">CHINESE STUDY</div>
+  <div class="title">중국어 문장 분석기</div>
+  <div class="sub">API 키나 결제 없이, 이 기기에서 바로 중국어 문장을 분석합니다.</div>
+
+  <div class="card">
+    <textarea id="input" placeholder="중국어 문장이나 노래 가사를 입력하세요.">钟小姐前被徐夫人派来这里办婚礼，现在婚礼完成，女君北上，她自然也同行回去。</textarea>
+    <div class="controls">
+      <button class="btn soft" onclick="example()">예시</button>
+      <button class="btn dark" onclick="analyze()">분석하기</button>
+    </div>
+    <div class="notice">✓ 이 버전은 OpenAI API를 사용하지 않습니다. API Key도 저장하거나 전송하지 않습니다.</div>
+  </div>
+
+  <div id="result" class="result"></div>
+</div>
+
+<script>
+const dict={
+"我":["wǒ","나"],"你":["nǐ","너"],"他":["tā","그"],"她":["tā","그녀"],"我们":["wǒmen","우리"],
+"是":["shì","~이다"],"有":["yǒu","있다/가지다"],"在":["zài","~에 있다/~에서"],"来":["lái","오다"],"去":["qù","가다"],
+"回去":["huíqù","돌아가다"],"回来":["huílái","돌아오다"],"现在":["xiànzài","지금"],"然后":["ránhòu","그리고 나서"],
+"因为":["yīnwèi","~때문에"],"所以":["suǒyǐ","그래서"],"但是":["dànshì","하지만"],"也":["yě","또한"],"都":["dōu","모두"],
+"很":["hěn","매우"],"自然":["zìrán","자연스럽게"],"完成":["wánchéng","완료하다"],"婚礼":["hūnlǐ","결혼식"],
+"这里":["zhèlǐ","여기"],"那里":["nàlǐ","저기"],"今天":["jīntiān","오늘"],"明天":["míngtiān","내일"],
+"昨天":["zuótiān","어제"],"前":["qián","앞/이전"],"后":["hòu","뒤/이후"],"上":["shàng","위/올라가다"],
+"下":["xià","아래/내려가다"],"派":["pài","보내다/파견하다"],"办":["bàn","처리하다/하다"],"现在":["xiànzài","지금"],
+"小姐":["xiǎojiě","아가씨/小姐"],"夫人":["fūrén","부인"],"女君":["nǚjūn","여군/여주인"],"同行":["tóngxíng","동행하다"],
+"这里":["zhèlǐ","여기"],"也":["yě","또/역시"],"自然":["zìrán","자연스럽게"],"北上":["běishàng","북쪽으로 올라가다"]
+};
+const examples=[
+"我今天要去学校学习中文。",
+"因为下雨，所以我没有出去。",
+"她现在在家里看书。",
+"如果你有时间，我们一起去吧。"
+];
+function esc(s){return String(s??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]))}
+function example(){document.getElementById("input").value=examples[Math.floor(Math.random()*examples.length)];analyze()}
+function detectType(s){
+ if(/如果/.test(s)&&/(就|那么)/.test(s)) return "조건문";
+ if(/因为/.test(s)&&/所以/.test(s)) return "원인·결과문";
+ if(/虽然/.test(s)&&/(但是|可是|但)/.test(s)) return "양보·대조문";
+ if(/吗[。？?]?$/.test(s)) return "의문문";
+ if(/(不要|别|不准)/.test(s)) return "금지문";
+ if(/(把.+?)/.test(s)) return "把자문";
+ if(/被/.test(s)) return "被자문";
+ if(/(了|过|着)/.test(s)) return "상(완료·경험·진행) 표현 포함";
+ return "기본 서술문";
+}
+function tokenize(s){
+ const keys=Object.keys(dict).sort((a,b)=>b.length-a.length);
+ let found=[];let rest=s;
+ // dictionary matching, longest first; keep unmatched chunks as characters
+ while(rest){
+   let hit=keys.find(k=>rest.startsWith(k));
+   if(hit){found.push([hit,...dict[hit]]);rest=rest.slice(hit.length)}
+   else {rest=rest.slice(1)}
+ }
+ const uniq=[];for(const x of found) if(!uniq.some(y=>y[0]===x[0])) uniq.push(x);
+ return uniq;
+}
+function grammar(s){
+ const g=[];
+ if(/(因为.+所以)/.test(s)) g.push("因为 A，所以 B = A 때문에 B하다");
+ if(/如果/.test(s)) g.push("如果 A，就 B = 만약 A라면 B하다");
+ if(/虽然/.test(s)) g.push("虽然 A，但是 B = 비록 A지만 B하다");
+ if(/被/.test(s)) g.push("被 + 행위자 + 동사 = ~에게 ~을 당하다");
+ if(/把/.test(s)) g.push("把 + 목적어 + 동사 = 목적어를 어떻게 처리하다");
+ if(/(正在|在.+?呢)/.test(s)) g.push("正在/在 + 동사 = ~하고 있는 중이다");
+ if(/了/.test(s)) g.push("了 = 완료·변화 등을 나타내는 표지(문맥에 따라 의미가 달라짐)");
+ if(/过/.test(s)) g.push("过 = 과거 경험");
+ if(/着/.test(s)) g.push("着 = 동작/상태의 지속");
+ if(/(的|地|得)/.test(s)) g.push("的/地/得 = 수식·부사·보어 구조를 구분해 확인");
+ if(!g.length) g.push("내장 규칙에서 발견되는 대표 문형이 적습니다. 단어별 구조를 중심으로 확인하세요.");
+ return g;
+}
+function roughTranslation(s){
+ let out=s;
+ const reps=[
+ ["因为","왜냐하면"],["所以","그래서"],["但是","하지만"],["如果","만약"],["现在","지금"],["今天","오늘"],
+ ["我","나"],["你","너"],["她","그녀"],["他","그"],["我们","우리"],["这里","여기"],["学校","학교"],
+ ["学习","공부하다"],["中文","중국어"],["看书","책을 읽다"],["去","가다"],["来","오다"],["回去","돌아가다"],
+ ["完成","완료하다"],["婚礼","결혼식"],["自然","자연스럽게"],["也","또한"],["同行","동행하다"],["北上","북쪽으로 올라가다"]
+ ];
+ for(const [a,b] of reps) out=out.split(a).join(" "+b+" ");
+ return out.replace(/\s+/g," ").trim();
+}
+function analyze(){
+ const s=document.getElementById("input").value.trim();
+ if(!s){document.getElementById("result").innerHTML='<div class="section empty">문장을 입력해주세요.</div>';return}
+ const words=tokenize(s), type=detectType(s), gs=grammar(s);
+ document.getElementById("result").innerHTML=`
+ <div class="section"><h2>입력 문장</h2><div class="sentence">${esc(s)}</div></div>
+ <div class="section"><h2>문장 유형</h2><div class="chips"><span class="chip"><b>구조</b>${esc(type)}</span><span class="chip"><b>글자 수</b>${[...s].length}</span></div></div>
+ <div class="section"><h2>핵심 단어</h2>${words.length?`<table><thead><tr><th>중국어</th><th>병음</th><th>뜻</th></tr></thead><tbody>${words.map(w=>`<tr><td><b>${esc(w[0])}</b></td><td class="pinyin">${esc(w[1])}</td><td class="ko">${esc(w[2])}</td></tr>`).join("")}</tbody></table>`:'<div class="empty">내장 단어 사전에서 인식된 단어가 없습니다.</div>'}</div>
+ <div class="section"><h2>문법 포인트</h2><div class="tip">${gs.map(x=>`<p>• ${esc(x)}</p>`).join("")}</div></div>
+ <div class="section"><h2>간단한 의미 힌트</h2><div class="tip">${esc(roughTranslation(s))}<br><small>※ API/번역 엔진 없이 동작하는 규칙 기반 힌트라서 자연스러운 전체 번역은 보장하지 않습니다.</small></div></div>
+ <div class="section"><h2>학습 포인트</h2><div class="tip">① 문장을 먼저 덩어리로 끊어 읽기 → ② 동사와 목적어 찾기 → ③ 시간·장소·부사어 위치 확인 → ④ 了/过/着, 把/被 같은 문법 표지 확인 순서로 공부해 보세요.</div></div>`;
+}
+analyze();
+</script>
+</body>
+</html>
