@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="중국어 분석기">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<title>중국어 문장 분석기</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f5f7;color:#1d1d1f;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-serif}
+main{max-width:820px;margin:auto;padding:34px 18px 60px}.hero{margin-bottom:22px}.eyebrow{font-size:12px;font-weight:700;color:#86868b;letter-spacing:.12em}.title{font-size:34px;font-weight:800;margin:6px 0}.sub{color:#6e6e73;line-height:1.6}
+.card,.box{background:#fff;border-radius:20px;padding:18px;box-shadow:0 2px 12px #0000000a}textarea{width:100%;min-height:230px;border:0;outline:0;resize:vertical;font:18px/1.8 inherit;color:inherit}textarea::placeholder{color:#a1a1a6}
+.actions{display:flex;gap:9px;align-items:center;margin-top:12px}button{border:0;border-radius:12px;padding:13px 17px;font:700 15px inherit;cursor:pointer}.primary{background:#111827;color:white}.secondary{background:#eeeef0}.grow{flex:1}
+.key{margin-top:10px;width:100%;padding:12px;border:1px solid #ddd;border-radius:11px;font:14px inherit}.note{font-size:12px;color:#86868b;line-height:1.5;margin:10px 2px 0}
+#status{color:#6e6e73;margin:18px 2px;display:none}.result{margin-top:20px}.box{margin:12px 0;line-height:1.85}.cn{font-size:21px;font-weight:750}.py{color:#6e6e73}.tag{display:inline-block;background:#f0f0f2;color:#555;border-radius:8px;padding:3px 8px;font-size:12px}.error{padding:14px;border-radius:12px;background:#fff0ef;color:#b42318}
+.install{display:none;margin:14px 0;padding:13px 15px;border-radius:14px;background:#eef2ff;color:#27346b;line-height:1.55;font-size:13px}.install.show{display:block}
+@media(max-width:600px){.title{font-size:29px}.actions{flex-direction:column}.actions button{width:100%}.grow{display:none}}
+</style></head>
+<body><main>
+<header class="hero"><div class="eyebrow">CHINESE STUDY</div><div class="title">중국어 문장 분석기</div><p class="sub">문장이나 노래 가사를 넣으면 중국어 초보자가 공부하기 쉽게 분석합니다.</p></header>
+<div class="install" id="install">Safari의 <b>공유</b> 버튼 → <b>홈 화면에 추가</b>를 누르면 앱처럼 사용할 수 있어요.</div>
+<section class="card">
+<textarea id="input" placeholder="중국어 문장이나 노래 가사를 입력하세요."></textarea>
+<div class="actions"><span class="grow"></span><button class="secondary" id="sample">예시</button><button class="primary" id="go">분석하기</button></div>
+<input class="key" id="key" type="password" placeholder="OpenAI API Key">
+<p class="note">개인용 테스트 버전입니다. API 키는 이 기기의 브라우저 저장소에만 저장됩니다.</p>
+</section>
+<div id="status">AI가 문장을 분석하고 있어요…</div><section class="result" id="result"></section>
+</main>
+<script>
+const $=x=>document.getElementById(x);
+if(location.protocol==="https:" && "serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js");
+if(/iPad|iPhone|iPod/.test(navigator.userAgent) && !navigator.standalone) $("install").classList.add("show");
+$("key").value=localStorage.getItem("cn_key")||"";
+$("key").onchange=()=>localStorage.setItem("cn_key",$("key").value.trim());
+$("sample").onclick=()=>{$("input").value="耳边的风轻轻吹过\n我们终会再见";demo()};
+function demo(){$("result").innerHTML=`<div class="box"><div class="cn">耳边的风轻轻吹过</div><div class="py">ěrbiān de fēng qīngqīng chuīguò</div><p>→ 귀가에 바람이 살며시 스쳐 지나간다.</p><p><b>耳 / ěr / 이</b> → 귀. <b>耳边 / ěrbiān / 이변</b> → 귓가.<br><b>轻轻 / qīngqīng / 경경</b> → 살며시, 가볍게.<br><b>吹过 / chuīguò / 취과</b> → 불어 지나가다, 스쳐 지나가다.</p><p>→ <b>轻轻</b>이 동작을 부드럽게 만들고, <b>吹过</b>가 “스쳐 지나가다”라는 의미를 만들어 자연스럽게 의역됩니다.</p><span class="tag">문학적 표현 / 가사체</span></div>`}
+function esc(s){return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+async function run(){let text=$("input").value.trim(),key=$("key").value.trim();if(!text){$("result").innerHTML='<div class="error">중국어 문장이나 가사를 입력해 주세요.</div>';return}if(!key){$("result").innerHTML='<div class="error">OpenAI API Key를 입력해 주세요. API 키 없이 화면을 확인하려면 “예시”를 눌러주세요.</div>';return}
+$("status").style.display="block";$("result").innerHTML="";
+const system=`너는 중국어 초보자용 문장/노래 가사 분석기다. 한국어로만 답한다. 원문 전체의 병음을 먼저 제시한다. 중요한 한자/구문은 반드시 "한자 / 병음 / 한국 한자음 → 기본 뜻 + 문장 속 의미" 형식으로 설명한다. 중국어 한자나 단어를 제시할 때마다 바로 뒤에 병음을 붙인다. 단일 한자도 같은 형식을 지킨다. 핵심은 어떤 글자/구문이 어떤 의미를 만드는지 설명하는 것이다. 자연스러운 한국어 번역을 제시하고 직역과 의역이 다르면 핵심 표현을 짚는다. 필요한 경우 비슷한 표현 1~2개와 짧은 뉘앙스 차이를 제시한다. 마지막은 "뉘앙스:"로 1~2문장. 표는 쓰지 않는다. 설명은 초보자 기준으로 간결하게 한다. 어원은 설명하지 않는다. 노래 가사는 생략과 문학적 표현을 고려한다.`;
+try{let r=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model:"gpt-5.6",input:[{role:"system",content:system},{role:"user",content:text}]})});let d=await r.json();if(!r.ok)throw Error(d.error?.message||"API 오류");let out=(d.output||[]).flatMap(x=>x.content||[]).map(x=>x.text||"").join("");$("result").innerHTML='<div class="box" style="white-space:pre-wrap">'+esc(out)+'</div>'}catch(e){$("result").innerHTML='<div class="error">분석 실패: '+esc(e.message)+'</div>'}finally{$("status").style.display="none"}}
+$("go").onclick=run;$("input").addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key==="Enter")run()});
+</script></body></html>
